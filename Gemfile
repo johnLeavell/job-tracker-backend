@@ -1,7 +1,7 @@
 source 'https://rubygems.org'
 git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
-ruby '2.6.1'
+ruby '3.1.6'
 
 # Bundle edge Rails instead: gem 'rails', github: 'rails/rails'
 gem 'rails', '~> 6.0.3', '>= 6.0.3.1'
@@ -21,6 +21,14 @@ gem 'bcrypt', '~> 3.1.7'
 
 # Reduces boot times through caching; required in config/boot.rb
 gem 'bootsnap', '>= 1.4.2', require: false
+
+# Ruby 3.1+ ships Psych 4, which defaults YAML.load to safe_load and breaks
+# the merge-key aliases (`<<: *default`) Rails 6 config files rely on.
+gem 'psych', '~> 3.3'
+
+# Rails 6.0's ActiveSupport expects the `logger` stdlib to already be loaded;
+# newer Ruby no longer guarantees that load order.
+gem 'logger'
 
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin AJAX possible
 gem 'rack-cors'

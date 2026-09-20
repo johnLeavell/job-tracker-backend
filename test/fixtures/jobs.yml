@@ -1,11 +1,17 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
-# This model initially had no columns defined. If you add columns to the
-# model remove the '{}' from the fixture names and add the columns immediately
-# below each fixture, per the syntax in the comments below
-#
-one: {}
-# column: value
-#
-two: {}
-# column: value
+alice_job_applied:
+  company_name: Acme Corp
+  title: Backend Developer
+  status: 0
+  applied_date: <%= 3.weeks.ago.to_date %>
+  user: alice
+  resume: alice_resume
+
+alice_job_interviewing:
+  company_name: Globex
+  title: Senior Engineer
+  status: 2
+  applied_date: <%= 4.weeks.ago.to_date %>
+  responded_at: <%= 3.weeks.ago %>
+  user: alice
