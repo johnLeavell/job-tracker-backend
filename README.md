@@ -1,53 +1,86 @@
-# README
+# Job Tracker Backend
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+A Rails API for tracking job applications: which companies you've applied to,
+what stage each application is in, which resume version you used, and the
+metrics job seekers care about (response rate, interview rate, offer rate,
+application trends over time, and performance by resume/tag/company).
 
-Things you may want to cover:
+## Stack
 
-* Ruby version
+* Ruby 3.1.6, Rails 6.0 (API-only)
+* PostgreSQL
+* JWT auth (`jwt` gem) with `has_secure_password`
+* `active_model_serializers` for JSON responses
 
-* System dependencies
+## Setup
 
-* Configuration
-
-* Database creation
-
-* Database initialization
-
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
-
-creating a new reails server with, Cors, ActiveModel::Serializer, & Postgres.  Namespancing and versioning 
-
-rails new job-tracker-bakcend --api --database=postgresql
-
-Let's create our app with rails new backend_project_name --api --database=postgresql
-
-We're going to need a few gems in our Gemfile so let's go ahead and add them: bundle add jwt && bundle add active_model_serializers && bundle add faker––if you get a gem not found error, try running gem install on each of these, or manually add them to your Gemfile.
-
-Don't forget to uncomment rack-cors and bcrypt from your Gemfile.
-
-Call bundle install.
-
-Don't forget to enable CORS in your app. Uncomment the following in config/initializers/cors.rb. Don't forget to change the origins from example.com to *
-
-rails g model User username password_digest bio avatar
-rails g controller api/v1/users
-rails g serializer user (if you want to use a serializer)
+```bash
+bundle install
 rails db:create
 rails db:migrate
+rails db:seed   # optional: creates a demo user + ~40 sample applications
+rails server
+```
 
-class User < ApplicationRecord
-  has_secure_password
-end
+Seeded demo login: `username: demo`, `password: password`.
 
-class User < ApplicationRecord
-  has_secure_password
-  validates :username, uniqueness: { case_sensitive: false }
-end 
+Run the test suite with `rails test`.
+
+## Data model
+
+* **User** — has many jobs and resumes, authenticates via `has_secure_password`.
+* **Resume** — a named resume version (`"Backend Engineer v1"`) belonging to a user.
+* **Job** — a single application: company, title, `status` enum
+  (`applied`, `phone_screen`, `interviewing`, `offer`, `rejected`, `withdrawn`),
+  `applied_date`, free-form `notes`, optional `resume`, and `responded_at`
+  (stamped automatically the first time status moves off `applied`).
+* **Tag** — a label (e.g. `remote`, `backend`) attached to jobs many-to-many
+  through **JobsTag**.
+
+## Auth
+
+Sign up or log in to get a JWT, then send it as `Authorization: Bearer <token>`
+on every other request. All job/resume/stat data is scoped to the
+authenticated user.
+
+```
+POST /api/v1/signup      { username, password }        -> { user, token }
+POST /api/v1/login       { username, password }         -> { user, token }
+GET  /api/v1/auto_login                                 -> current user (validates token)
+GET  /api/v1/profile                                    -> current user
+```
+
+## Jobs
+
+```
+GET    /api/v1/jobs                 optional ?status=interviewing filter
+GET    /api/v1/jobs/:id
+POST   /api/v1/jobs                 { company_name, title, status, applied_date, notes,
+                                       resume_id, tag_names: ["remote", "backend"] }
+PATCH  /api/v1/jobs/:id
+DELETE /api/v1/jobs/:id
+```
+
+## Resumes / Tags / JobsTags
+
+```
+GET/POST/PATCH/DELETE  /api/v1/resumes(/:id)
+GET/POST/PATCH/DELETE  /api/v1/tags(/:id)
+GET/POST/DELETE        /api/v1/jobs_tags(/:id)   { job_id, tag_id } to link a tag to a job
+```
+
+## Metrics
+
+```
+GET /api/v1/stats
+```
+
+Returns, scoped to the current user:
+
+* `total_applications`, `by_status` counts for every status
+* `rates` — `response_rate`, `interview_rate`, `offer_rate`
+* `applications_per_week` — a trend line of applications by week
+* `average_days_to_first_response`
+* `by_tag`, `by_company` — application counts grouped each way
+* `by_resume` — total applications, response rate, and offer rate per resume,
+  so you can see which resume version performs best

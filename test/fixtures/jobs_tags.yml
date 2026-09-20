@@ -1,7 +1,9 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
-remote:
-  name: remote
+one:
+  job: alice_job_applied
+  tag: remote
 
-backend:
-  name: backend
+two:
+  job: alice_job_applied
+  tag: backend

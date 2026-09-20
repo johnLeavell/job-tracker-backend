@@ -1,53 +1,56 @@
 class Api::V1::JobsController < ApplicationController
-    def show
-        job = Job.find(params[:id])
-    end
-  
+    before_action :authorize!
+    before_action :set_job, only: [:show, :update, :destroy]
+
     def index
-        job = Job.all
-        render json: job, include: [:user]
+        jobs = current_user.jobs
+        jobs = jobs.where(status: params[:status]) if params[:status].present?
+        render json: jobs.order(applied_date: :desc, created_at: :desc), include: [:tags, :resume]
     end
-  
+
+    def show
+        render json: @job, include: [:tags, :resume]
+    end
+
     def create
-        @user = User.find_by(id: params[:user_id])
-        @job = Job.new(
-            tags: params[:tags], 
-            date: params[:date], 
-            applied: params[:applied], 
-            title: params[:title], 
-            compnay_name: params[:compnay_name], 
-            user: @user
-            )
-        if @job.valid?
-            @job.save
-            render json: @job
+        job = current_user.jobs.new(job_params)
+
+        if job.save
+            assign_tags(job)
+            render json: job, include: [:tags, :resume], status: :created
         else
-            render json: {error: 'Job could not be created'}
+            render json: { errors: job.errors.full_messages }, status: :unprocessable_entity
         end
     end
-  
+
     def update
-        @job = Job.find(params[:id])
-        if @job.valid?
-            @job.update( 
-                tags: params[:tags], 
-                date: params[:date], 
-                applied: params[:applied], 
-                title: params[:title], 
-                compnay_name: params[:compnay_name]
-                )
-            render json: @job
+        if @job.update(job_params)
+            assign_tags(@job)
+            render json: @job, include: [:tags, :resume]
         else
-            render json: {error: 'Job could not be updated'}
+            render json: { errors: @job.errors.full_messages }, status: :unprocessable_entity
         end
     end
-  
+
     def destroy
-        @job = Job.find(params[:id])
-        if @job.valid?
-            @job.delete
-        else
-            render json: {error: 'Job could not be deleted'}
-        end
-    end 
+        @job.destroy
+        head :no_content
+    end
+
+    private
+
+    def set_job
+        @job = current_user.jobs.find(params[:id])
+    end
+
+    def job_params
+        params.permit(:company_name, :title, :status, :applied_date, :notes, :resume_id)
+    end
+
+    def assign_tags(job)
+        return unless params[:tag_names]
+
+        names = Array(params[:tag_names]).map { |name| name.to_s.strip.downcase }.reject(&:blank?)
+        job.tags = names.map { |name| Tag.find_or_create_by(name: name) }
+    end
 end
